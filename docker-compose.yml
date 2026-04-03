@@ -146,9 +146,44 @@ services:
     volumes:
       - ./task_manager_service:/app  
 
+  notification_db:
+    image: postgres:15-alpine
+    container_name: notification_db_container
+    environment:
+      POSTGRES_USER: notify_user
+      POSTGRES_PASSWORD: notify_pass
+      POSTGRES_DB: notify_db
+    ports:
+      - "5436:5432"
+    volumes:
+      - notification_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U notify_user -d notify_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  notification_service:
+    build: ./notification_service
+    container_name: notification_app
+    ports:
+      - "8004:8004"
+    depends_on:
+      notification_db:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://notify_user:notify_pass@notification_db:5432/notify_db
+      - SMTP_HOST=smtp.gmail.com
+      - SMTP_PORT=465
+      - SMTP_USER=your_email@gmail.com
+      - SMTP_PASS=your_app_password
+    volumes:
+      - ./notification_service:/app
+
 volumes:
   user_db_data:
   storage_db_data:
   minio_data:
   mongodb_data:
   task_db_data:
+  notification_db_data:
