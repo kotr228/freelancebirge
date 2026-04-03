@@ -1,0 +1,93 @@
+services:
+  # 1. База користувачів
+  user_db:
+    image: postgres:15-alpine
+    container_name: user_db_container
+    environment:
+      POSTGRES_USER: user_admin
+      POSTGRES_PASSWORD: secret_password
+      POSTGRES_DB: user_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - user_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user_admin -d user_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 2. Сервіс користувачів
+  user_service:
+    build: ./user_service
+    container_name: user_service_app
+    ports:
+      - "8000:8000"
+    depends_on:
+      user_db:
+        condition: service_healthy
+    volumes:
+      - ./user_service:/app
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://user_admin:secret_password@user_db:5432/user_db
+
+  # 3. Сховище файлів (MinIO) - ЗМІНИЛИ НАЗВУ СЕРВІСУ ТУТ
+  minio-storage:
+    image: minio/minio
+    container_name: minio_storage_app
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: password123
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 4. База для метаданих файлів
+  storage_db:
+    image: postgres:15-alpine
+    container_name: storage_db_container
+    environment:
+      POSTGRES_USER: storage_admin
+      POSTGRES_PASSWORD: storage_pass
+      POSTGRES_DB: storage_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - storage_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U storage_admin -d storage_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 5. Сервіс для роботи з файлами
+  storage_service:
+    build: ./storage_service
+    container_name: storage_service_app
+    ports:
+      - "8001:8001"
+    depends_on:
+      storage_db:
+        condition: service_healthy
+      minio-storage: # ПЕРЕВІР, ЩО ТУТ ТАКЕ Ж ІМ'Я ЯК ВИЩЕ
+        condition: service_healthy
+    volumes:
+      - ./storage_service:/app
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://storage_admin:storage_pass@storage_db:5432/storage_db
+      - MINIO_ENDPOINT=minio-storage:9000 # ТЕПЕР ХОСТ ВАЛІДНИЙ ДЛЯ S3
+      - MINIO_ROOT_USER=admin
+      - MINIO_ROOT_PASSWORD=password123      
+
+volumes:
+  user_db_data:
+  storage_db_data:
+  minio_data:

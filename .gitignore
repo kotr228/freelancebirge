@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.pyc
+venv/
+.env
+
+# Docker data
+user_db_data/
+storage_db_data/
+minio_data/
+
+# IDE
+.vscode/
+.idea/
+.DS_Store

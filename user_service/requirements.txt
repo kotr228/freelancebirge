@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+sqlalchemy[asyncio]
+asyncpg
+pydantic[email]
+passlib[bcrypt]
+python-dotenv
+minio
+python-multipart
