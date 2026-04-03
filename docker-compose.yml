@@ -110,10 +110,45 @@ services:
       - ./chat_service:/app
     environment:
       - MONGO_URL=mongodb://admin:mongo_password@chat_mongodb:27017
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8002 --reload   
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8002 --reload 
+
+  # База даних для задач
+  task_db:
+    image: postgres:15-alpine
+    container_name: task_db_container
+    environment:
+      POSTGRES_USER: task_user
+      POSTGRES_PASSWORD: task_pass
+      POSTGRES_DB: task_db
+    ports:
+      - "5435:5432"
+    volumes:
+      - task_db_data:/var/lib/postgresql/data
+    # ДОДАЄМО ЦЕЙ БЛОК:
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U task_user -d task_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Сервіс задач
+  task_manager_service:
+    build: ./task_manager_service
+    container_name: task_manager_app
+    ports:
+      - "8003:8003"
+    # ОНОВЛЮЄМО ЗАЛЕЖНІСТЬ:
+    depends_on:
+      task_db:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://task_user:task_pass@task_db:5432/task_db
+    volumes:
+      - ./task_manager_service:/app  
 
 volumes:
   user_db_data:
   storage_db_data:
   minio_data:
   mongodb_data:
+  task_db_data:
