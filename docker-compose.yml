@@ -85,9 +85,35 @@ services:
       - DATABASE_URL=postgresql+asyncpg://storage_admin:storage_pass@storage_db:5432/storage_db
       - MINIO_ENDPOINT=minio-storage:9000 # ТЕПЕР ХОСТ ВАЛІДНИЙ ДЛЯ S3
       - MINIO_ROOT_USER=admin
-      - MINIO_ROOT_PASSWORD=password123      
+      - MINIO_ROOT_PASSWORD=password123  
+
+  # База даних для чатів
+  chat_mongodb:
+    image: mongo:latest
+    container_name: chat_mongodb_container
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: mongo_password
+
+  chat_service:
+    build: ./chat_service
+    container_name: chat_service_app
+    ports:
+      - "8002:8002"
+    depends_on:
+      - chat_mongodb
+    volumes:
+      - ./chat_service:/app
+    environment:
+      - MONGO_URL=mongodb://admin:mongo_password@chat_mongodb:27017
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8002 --reload   
 
 volumes:
   user_db_data:
   storage_db_data:
   minio_data:
+  mongodb_data:
