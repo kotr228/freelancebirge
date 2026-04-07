@@ -1,3 +1,6 @@
+import json
+from bson import ObjectId # <--- ДОДАЙ ЦЕЙ ІМПОРТ ЗВЕРХУ
+from pydantic.deprecated.json import pydantic_encoder
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException
 from ..database import messages_collection
 from ..models import MessageCreate, MessageDocument
@@ -52,7 +55,10 @@ async def chat_websocket(websocket: WebSocket, room_id: str, user_id: str):
         manager.disconnect(room_id, user_id)
 
 def json_compatible(data):
-    # Допоміжна функція для конвертації UUID та datetime в рядки
-    import json
-    from pydantic.json import pydantic_encoder
-    return json.loads(json.dumps(data, default=pydantic_encoder))
+    # Створюємо власного перекладача для JSON
+    def custom_encoder(obj):
+        if isinstance(obj, ObjectId):
+            return str(obj) # Якщо це ObjectId з Монго, робимо з нього звичайний рядок
+        return pydantic_encoder(obj) # Для всього іншого використовуємо стандартний Pydantic
+
+    return json.loads(json.dumps(data, default=custom_encoder))
