@@ -5,7 +5,7 @@ from jose import JWTError, jwt
 import bcrypt
 from fastapi import HTTPException, status
 
-SECRET_KEY = "your-super-secret-key-here"
+SECRET_KEY = "super_secret_birge_key_123"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
 

@@ -108,7 +108,7 @@ services:
     volumes:
       - ./chat_service:/app
     environment:
-      - MONGO_URL=mongodb://admin:mongo_password@chat_mongodb_container:27017/?authSource=admin
+      - MONGO_URL=mongodb://admin:mongo_password@chat-mongodb:27017/?authSource=admin
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload 
 
   # База даних для задач

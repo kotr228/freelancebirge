@@ -7,3 +7,5 @@ passlib[bcrypt]
 python-dotenv
 minio
 python-multipart
+PyJWT
+python-jose[cryptography]
