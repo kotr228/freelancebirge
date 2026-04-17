@@ -42,3 +42,21 @@ async def get_user_tasks(user_id: UUID, db: AsyncSession = Depends(get_db)):
     query = select(Task).where(or_(Task.employer_id == user_id, Task.freelancer_id == user_id))
     result = await db.execute(query)
     return result.scalars().all()
+
+@router.delete("/{task_id}")
+async def delete_task(task_id: UUID, employer_id: UUID, db: AsyncSession = Depends(get_db)):
+    # Шукаємо задачу
+    result = await db.execute(select(Task).where(Task.id == task_id))
+    task = result.scalar_one_or_none()
+    
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+        
+    # Перевіряємо, чи має право цей юзер видаляти задачу
+    if task.employer_id != employer_id:
+        raise HTTPException(status_code=403, detail="Only the employer can delete this task")
+        
+    # Видаляємо
+    await db.delete(task)
+    await db.commit()
+    return {"status": "success", "message": "Task deleted"}

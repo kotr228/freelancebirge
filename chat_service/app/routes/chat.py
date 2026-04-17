@@ -54,6 +54,35 @@ async def chat_websocket(websocket: WebSocket, room_id: str, user_id: str):
     except WebSocketDisconnect:
         manager.disconnect(room_id, user_id)
 
+# 4. Отримання списку кімнат (Aggregation)
+@router.get("/rooms") 
+async def get_rooms():
+    pipeline = [
+        {"$sort": {"timestamp": -1}},
+        {"$group": {
+            "_id": "$room_id",
+            "lastMessage": {"$first": "$text"},
+            "time": {"$first": "$timestamp"}
+        }},
+        {"$project": {
+            "room_id": "$_id",
+            "name": {"$concat": ["Кімната #", "$_id"]},
+            "lastMessage": 1,
+            "time": 1,
+            "_id": 0
+        }},
+        {"$sort": {"time": -1}}
+    ]
+    
+    cursor = messages_collection.aggregate(pipeline)
+    rooms = await cursor.to_list(length=100)
+    
+    for room in rooms:
+        if "time" in room and room["time"]:
+            room["time"] = room["time"].strftime("%H:%M")
+                
+    return json_compatible(rooms)
+
 def json_compatible(data):
     # Створюємо власного перекладача для JSON
     def custom_encoder(obj):

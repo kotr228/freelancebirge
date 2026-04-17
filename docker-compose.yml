@@ -87,29 +87,31 @@ services:
       - MINIO_ROOT_PASSWORD=password123 
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload 
 
-  # База даних для чатів
-  chat-mongodb: 
-    image: mongo:latest
-    container_name: chat_mongodb_container
+  # База даних для чатів (ПОВНІСТЮ НОВЕ ІМ'Я)
+  chatmongo: 
+    image: mongo:6.0  # Стабільна версія, не боїться Arch Linux
+    container_name: chatmongo
     ports:
       - "27017:27017"
     volumes:
-      - mongodb_data:/data/db
+      - chatmongo_fresh_data:/data/db  # НОВИЙ ТОМ (ігнорує старі биті файли)
     environment:
       MONGO_INITDB_ROOT_USERNAME: admin
       MONGO_INITDB_ROOT_PASSWORD: mongo_password
 
+  # Сервіс чатів
   chat_service:
     build: ./chat_service
     container_name: chat_service_app
     ports: ["8002:8000"]
     depends_on:
-      - chat-mongodb # 2. ЗМІНЮЄМО ТУТ ЗАЛЕЖНІСТЬ
+      - chatmongo # ТЕПЕР ЗАЛЕЖИТЬ ВІД НОВОГО ІМЕНІ
     volumes:
       - ./chat_service:/app
     environment:
-      - MONGO_URL=mongodb://admin:mongo_password@chat-mongodb:27017/?authSource=admin
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload 
+      # ВИКОРИСТОВУЄМО ЧИСТЕ ІМ'Я: chatmongo
+      - MONGO_URL=mongodb://admin:mongo_password@chatmongo:27017/?authSource=admin
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
   # База даних для задач
   task_db:
@@ -206,3 +208,4 @@ volumes:
   mongodb_data:
   task_db_data:
   notification_db_data:
+  chatmongo_fresh_data:

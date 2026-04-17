@@ -23,11 +23,11 @@ async def proxy_patch(path: str, request: Request, payload: dict = Body(None)):
 async def proxy_delete(path: str, request: Request):
     return await base_proxy(f"{settings.CHAT_SERVICE_URL}/chat/{path}", request)
 
-@router.websocket("/ws/{room_id}")
-async def websocket_proxy(websocket: WebSocket, room_id: str):
+@router.websocket("/ws/{room_id}/{user_id}")
+async def websocket_proxy(websocket: WebSocket, room_id: str, user_id: str):
     await websocket.accept()
     
-    backend_ws_url = f"ws://chat_service:8000/chat/ws/{room_id}"
+    backend_ws_url = f"ws://chat_service:8000/chat/ws/{room_id}/{user_id}"
 
     try:
         async with websockets.connect(backend_ws_url) as backend_ws:
@@ -55,4 +55,5 @@ async def websocket_proxy(websocket: WebSocket, room_id: str):
             
     except Exception as e:
         print(f"WebSocket Proxy Error: {e}")
-        await websocket.close(code=1011)
+        if not websocket.client_state.name == "DISCONNECTED":
+            await websocket.close(code=1011)
